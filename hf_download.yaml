@@ -1,0 +1,62 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hf-dataset-download
+  namespace: anayak
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: downloader
+          image: python:3.11-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+
+              pip install --no-cache-dir \
+                "huggingface_hub[hf_xet]"
+
+              mkdir -p /workspace/datasets
+
+              hf download \
+                shulnak09/polygon_formation_python_env \
+                --repo-type dataset \
+                --local-dir /workspace/datasets/polygon_formation_python_env
+
+              echo "Download completed!"
+              du -sh /workspace/datasets/polygon_formation_python_env
+
+          env:
+            - name: HF_HOME
+              value: /workspace/hf-cache
+            - name: HF_XET_HIGH_PERFORMANCE
+              value: "1"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: HF_TOKEN
+
+          resources:
+            requests:
+              cpu: "4"
+              memory: 8Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+
+          volumeMounts:
+            - name: storage
+              mountPath: /workspace
+
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: vlm-storage

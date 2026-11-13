@@ -1,0 +1,16 @@
+# CephFS based shared files for training
+
+
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vlm-storage
+  namespace: anayak
+spec:
+  storageClassName: rook-cephfs
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi

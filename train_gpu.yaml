@@ -1,0 +1,68 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: train-2gpu
+  namespace: anayak
+
+spec:
+  backoffLimit: 0
+
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: trainer
+          image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              nvidia-smi
+              echo "2 A100 GPUs allocated"
+              sleep infinity
+
+          resources:
+            requests:
+              cpu: "8"
+              memory: 32Gi
+              nvidia.com/a100: "2"
+            limits:
+              cpu: "8"
+              memory: 32Gi
+              nvidia.com/a100: "2"
+
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: HF_TOKEN
+
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wandb-secret
+                  key: WANDB_API_KEY
+
+            - name: WANDB_PROJECT
+              value: "nautilus-vlm-training"
+
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+
+            - name: dshm
+              mountPath: /dev/shm
+
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: vlm-storage
+
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
